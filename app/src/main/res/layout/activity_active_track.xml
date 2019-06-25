@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <Button
+        android:id="@+id/start_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/start"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginBottom="14dp" />
+
+    <TextView
+        android:id="@+id/elapsed_time_label"
+        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:text="@string/elapsed_time"
+        app:layout_constraintTop_toBottomOf="@id/start_button"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/elapsed_time_value"
+        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:text="00:00:00"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/elapsed_time_label"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/distance_label"
+        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:text="@string/distance"
+        app:layout_constraintTop_toBottomOf="@id/start_button"
+        app:layout_constraintLeft_toRightOf="@id/elapsed_time_label"
+        android:layout_marginTop="8dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/distance_value"
+        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:text="00:00:00"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/elapsed_time_label"
+        app:layout_constraintLeft_toRightOf="@id/elapsed_time_value"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/latitude_label"
+        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:text="@string/latitude"
+        app:layout_constraintTop_toBottomOf="@id/elapsed_time_value"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/latitude_value"
+        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:text="----------"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/latitude_label"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/longitude_label"
+        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:text="@string/longitude"
+        app:layout_constraintTop_toBottomOf="@id/distance_value"
+        app:layout_constraintLeft_toRightOf="@id/latitude_label"
+        android:layout_marginTop="16dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/longitude_value"
+        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:text="----------"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/longitude_label"
+        app:layout_constraintLeft_toRightOf="@id/latitude_value"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginBottom="8dp" />
+
+</android.support.constraint.ConstraintLayout>

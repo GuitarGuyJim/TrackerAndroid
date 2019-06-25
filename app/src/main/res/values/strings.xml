@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Tracker</string>
+    <string name="new_track">New Track</string>
+    <string name="history">History</string>
+    <string name="track_name_title">New Track Name</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="elapsed_time">Elapsed Time</string>
+    <string name="distance">Distance</string>
+    <string name="latitude">Latitude</string>
+    <string name="longitude">Longitude</string>
+</resources>
