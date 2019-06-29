@@ -25,6 +25,7 @@
         <activity android:name=".ActiveTrackActivity">
 
         </activity>
+        <service android:name=".TrackerLocationService" />
     </application>
 
 </manifest>

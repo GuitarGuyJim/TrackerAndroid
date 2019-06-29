@@ -1,9 +1,14 @@
 package android.redskysoftware.com.tracker;
 
 import android.Manifest;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.IBinder;
 import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentManager;
@@ -15,12 +20,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.SettingsClient;
+
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -60,6 +60,8 @@ public class ActiveTrackActivity extends AppCompatActivity
     private TextView mLongitudeText;
 
     private FileOutputStream mOutputFile = null;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,7 +109,7 @@ public class ActiveTrackActivity extends AppCompatActivity
             int running = savedInstanceState.getInt(KEY_RUNNING, 0);
             if (running != 0) {
                 mRunning = true;
-                monitorTrack();
+             //   monitorTrack();
             }
         }
     }
@@ -142,17 +144,19 @@ public class ActiveTrackActivity extends AppCompatActivity
      */
     private void startTrack() {
 
-        try {
-            File dir = getFilesDir();
-            mOutputFile = openFileOutput("tracker.txt", 0);
-        } catch (IOException ioe) {
-            int break_here = 1;
-        }
+       // try {
+       //     File dir = getFilesDir();
+       //     mOutputFile = openFileOutput("tracker.txt", 0);
+       // } catch (IOException ioe) {
+       //     int break_here = 1;
+       // }
 
         if (hasLocationPermissions()) {
             mModel.startNewTrack(ActiveTrackActivity.this, mOutputFile);
+
+
             mElapsedTime = 0;
-            monitorTrack();
+       //     monitorTrack();
         } else {
             requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
         }
@@ -172,6 +176,7 @@ public class ActiveTrackActivity extends AppCompatActivity
                 if (hasLocationPermissions()) {
 
                     mModel.startNewTrack(ActiveTrackActivity.this, mOutputFile);
+
                     mElapsedTime = 0;
                     monitorTrack();
                 }

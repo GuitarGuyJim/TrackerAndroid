@@ -1,120 +1,89 @@
 package android.redskysoftware.com.tracker;
 
-import android.app.Activity;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.hardware.Sensor;
-import android.hardware.SensorManager;
-import android.hardware.TriggerEvent;
-import android.hardware.TriggerEventListener;
 import android.location.Location;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
-import android.widget.Toast;
 
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.SettingsClient;
 
+/**
+ * This service is responsible for collecting user location and updating track related information.
+ * This is done in this service so it will continue to happen, even when the Tracker activity is
+ * not currently active.
+ *
+ * This service also runs a thread to keep track of how long the track is active (duration).  That
+ * thread is started at the same time the service is started (and location data is requested).
+ *
+ * The collecting of location data and the duration task will both continue until the service is
+ * stopped (the user of the service unbinds from this service).
+ */
+public class TrackerLocationService extends Service {
 
-import java.io.FileOutputStream;
-import java.lang.Math;
-import java.io.IOException;
-
-public class TrackerDataModel {
-
-
-
-    private static final String TAG = "TrackerDataModel";
-
-    /** The singleton instance */
-    private static TrackerDataModel sModel;
-
-    private Context mContext;
-
-
-
-    private TrackerLocationService mLocationService = null;
-
-
-    private ServiceConnection mServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            mLocationService = ((TrackerLocationService.LocalBinder)service).getService();
-            mLocationService.startLocationCollecting(mContext);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            mLocationService = null;
-        }
-    };
-
-
+    /** Meters per degree of longitude at the equator */
+    private final Double METERS_PER_DEGREE = 111319.9;
 
     /**
-     * @return  The singleton instance of the data model, creating a model if one doesn't exist.
+     * Class for clients to access.  Because we know this service always
+     * runs in the same process as its clients, we don't need to deal with
+     * IPC.
      */
-    public static TrackerDataModel getInstance() {
-
-        if (sModel == null) {
-            sModel = new TrackerDataModel();
+    public class LocalBinder extends Binder {
+        TrackerLocationService getService() {
+            return TrackerLocationService.this;
         }
-
-        return sModel;
     }
 
-    public float getDistanceInFeet()
-    {
-        float distance;
+    // This is the object that receives interactions from clients.  See
+    // RemoteService for a more complete example.
+    private final IBinder mBinder = new LocalBinder();
 
-        synchronized (this) {
-            distance = mLocationService.getDistance();
-        }
+    private LocationRequest mLocationRequest;
 
-        return distance;
+    private Location mPreviousLocation;
+    private Location mCurrentLocation;
+    private float mDistanceMeters;
+    private boolean mFirstPosition = true;
+
+    private long UPDATE_INTERVAL = 1 * 1000;  /* 5 secs */
+    private long FASTEST_INTERVAL = 2000; /* 2 sec */
+
+    @Override
+    public void onCreate() {
+
+        //startLocationCollecting();
     }
 
-    public float getLatitude() {
-
-        float lat = 0.0f;
-
-        if (mLocationService.getCurrentLocation() != null) {
-            lat = (float)mLocationService.getCurrentLocation().getLatitude();
-        }
-
-        return lat;
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_STICKY;
     }
 
-    public float getLongitude() {
+    @Override
+    public void onDestroy() {
 
-        float lon = 0.0f;
-
-        if (mLocationService.getCurrentLocation() != null) {
-            lon = (float) mLocationService.getCurrentLocation().getLongitude();
-        }
-
-        return lon;
+        // Tell the user we stopped.
+        // Toast.makeText(this, R.string.local_service_stopped, Toast.LENGTH_SHORT).show();
+        int break_here = 1;
     }
 
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mBinder;
+    }
 
-    /**
-     * Starts a new track, collecting and storing position data periodically
-     * @return  True if the track was started successfully, false if not
-     */
-    public boolean startNewTrack(Activity activity, final FileOutputStream outputStream) {
-
-        Intent i = new Intent(activity, TrackerLocationService.class);
-        activity.bindService(i, mServiceConnection, Context.BIND_AUTO_CREATE);
-
-        mContext = activity;
-
-        /*
-
-        mDistanceMeters = 0;
-        mFirstPosition = true;
+    public void startLocationCollecting(Context context) {
 
         // Create the location request to start receiving updates
         mLocationRequest = new LocationRequest();
@@ -129,13 +98,13 @@ public class TrackerDataModel {
 
         // Check whether location settings are satisfied
         // https://developers.google.com/android/reference/com/google/android/gms/location/SettingsClient
-        SettingsClient settingsClient = LocationServices.getSettingsClient(activity);
+        SettingsClient settingsClient = LocationServices.getSettingsClient(context);
         settingsClient.checkLocationSettings(locationSettingsRequest);
 
         // new Google API SDK v11 uses getFusedLocationProviderClient(this)
         try {
-            Log.i(TAG, "requesting location");
-            LocationServices.getFusedLocationProviderClient(activity).requestLocationUpdates(mLocationRequest, new LocationCallback() {
+         //   Log.i(TAG, "requesting location");
+            LocationServices.getFusedLocationProviderClient(context).requestLocationUpdates(mLocationRequest, new LocationCallback() {
                         @Override
                         public void onLocationResult(LocationResult locationResult) {
 
@@ -183,7 +152,7 @@ public class TrackerDataModel {
                                     }
                                 }
 
-                                    mFirstPosition = false;
+                                mFirstPosition = false;
                                 //}
                             }
                         }
@@ -192,11 +161,26 @@ public class TrackerDataModel {
         } catch (SecurityException se) {
             int break_here = 1;
         }
-        */
-        // should we return a track ID instead on success?
-        return false;
+    }
+
+    public float getDistance() {
+
+        float distance;
+
+        synchronized (this) {
+            distance = mDistanceMeters * 3.28f;
+        }
+
+        return distance;
+    }
+
+    public Location getCurrentLocation() {
+        Location temp;
+
+        synchronized (this) {
+            temp = mCurrentLocation;
+        }
+
+        return temp;
     }
 }
-
-
-// https://guides.codepath.com/android/Retrieving-Location-with-LocationServices-API
