@@ -53,7 +53,6 @@ public class ActiveTrackActivity extends AppCompatActivity
      */
     private boolean mRunning = false;
 
-    private int mElapsedTime = 0;
     private TextView mElapsedTimeText;
     private TextView mDistanceText;
     private TextView mLatitudeText;
@@ -94,6 +93,7 @@ public class ActiveTrackActivity extends AppCompatActivity
                     // Set the mRunning false to flag to stop the thread
                     mRunning = false;
 
+                    mModel.stopTrack();
                     //TODO need to ask the user if they want to save the track, etc.
                 }
             }
@@ -104,12 +104,10 @@ public class ActiveTrackActivity extends AppCompatActivity
             //
             // There is saved instance data, so we'll restore it and decide what to do.
             //
-            mElapsedTime = savedInstanceState.getInt(KEY_ELAPSED_TIME, 0);
-
             int running = savedInstanceState.getInt(KEY_RUNNING, 0);
             if (running != 0) {
                 mRunning = true;
-             //   monitorTrack();
+                monitorTrack();
             }
         }
     }
@@ -126,6 +124,7 @@ public class ActiveTrackActivity extends AppCompatActivity
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
+
         super.onSaveInstanceState(savedInstanceState);
 
         if (mRunning) {
@@ -133,8 +132,6 @@ public class ActiveTrackActivity extends AppCompatActivity
         } else {
             savedInstanceState.putInt(KEY_RUNNING, 0);
         }
-
-        savedInstanceState.putInt(KEY_ELAPSED_TIME, mElapsedTime);
 
     }
 
@@ -152,11 +149,10 @@ public class ActiveTrackActivity extends AppCompatActivity
        // }
 
         if (hasLocationPermissions()) {
+
             mModel.startNewTrack(ActiveTrackActivity.this, mOutputFile);
+            monitorTrack();
 
-
-            mElapsedTime = 0;
-       //     monitorTrack();
         } else {
             requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
         }
@@ -177,34 +173,38 @@ public class ActiveTrackActivity extends AppCompatActivity
 
                     mModel.startNewTrack(ActiveTrackActivity.this, mOutputFile);
 
-                    mElapsedTime = 0;
                     monitorTrack();
                 }
         }
     }
 
-
+    /**
+     * Starts the monitoring of an active track, displaying the latest information to the user
+     */
     private void monitorTrack() {
-
 
         mRunning = true;
 
+        /*
+         * Create a thread that will periodically retrieve the latest track info from the data
+         * model and display that info.
+         */
         new Thread(new Runnable() {
             public void run() {
 
                 do {
 
-                    mElapsedTime += 1;
-
                     mElapsedTimeText.post(new Runnable() {
                         public void run() {
+
+                            int elapsedTime = mModel.getElapsedTime();
 
                             //
                             // Convert the elapsed time (which is in seconds) to
                             // hh:mm:ss format.
                             //
-                            int minutes = mElapsedTime / 60;
-                            int seconds = mElapsedTime % 60;
+                            int minutes = elapsedTime / 60;
+                            int seconds = elapsedTime % 60;
                             int hours = minutes / 60;
                             minutes = minutes % 60;
 
@@ -238,19 +238,6 @@ public class ActiveTrackActivity extends AppCompatActivity
                         }
                     });
 
-                                /*
-                                mDistanceText.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        if (mModel.isMoving()) {
-                                            mDistanceText.setText("MOVING");
-                                        } else {
-                                            mDistanceText.setText("STATIONARY");
-                                        }
-                                    }
-                                });
-                                */
-
                     mLatitudeText.post(new Runnable() {
                         @Override
                         public void run() {
@@ -265,6 +252,7 @@ public class ActiveTrackActivity extends AppCompatActivity
                         }
                     });
 
+                    // Sleep for one second and then do it all again
                     try {
                         Thread.sleep(1000);
                     } catch (java.lang.InterruptedException ie) {

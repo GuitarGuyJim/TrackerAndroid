@@ -20,8 +20,7 @@ import android.widget.Toast;
 
 
 import java.io.FileOutputStream;
-import java.lang.Math;
-import java.io.IOException;
+
 
 public class TrackerDataModel {
 
@@ -33,9 +32,6 @@ public class TrackerDataModel {
     private static TrackerDataModel sModel;
 
     private Context mContext;
-
-
-
     private TrackerLocationService mLocationService = null;
 
 
@@ -68,21 +64,42 @@ public class TrackerDataModel {
 
     public float getDistanceInFeet()
     {
-        float distance;
+        float distance = 0.0f;
 
         synchronized (this) {
-            distance = mLocationService.getDistance();
+            if (mLocationService != null) {
+                distance = mLocationService.getDistance();
+            }
         }
 
         return distance;
+    }
+
+    /**
+     * @return  The elapsed time of the current track, or 0 if there is no current track in
+     *          progress.
+     */
+    public int getElapsedTime()
+    {
+        int elapsedTime = 0;
+
+        synchronized (this) {
+            if ((mLocationService != null) && (mLocationService != null)) {
+                elapsedTime = mLocationService.getElapsedTime();
+            }
+        }
+
+        return elapsedTime;
     }
 
     public float getLatitude() {
 
         float lat = 0.0f;
 
-        if (mLocationService.getCurrentLocation() != null) {
-            lat = (float)mLocationService.getCurrentLocation().getLatitude();
+        synchronized (this) {
+            if ((mLocationService != null) && (mLocationService.getCurrentLocation() != null)) {
+                lat = (float) mLocationService.getCurrentLocation().getLatitude();
+            }
         }
 
         return lat;
@@ -92,7 +109,7 @@ public class TrackerDataModel {
 
         float lon = 0.0f;
 
-        if (mLocationService.getCurrentLocation() != null) {
+        if ((mLocationService != null) && (mLocationService.getCurrentLocation() != null)) {
             lon = (float) mLocationService.getCurrentLocation().getLongitude();
         }
 
@@ -110,91 +127,15 @@ public class TrackerDataModel {
         activity.bindService(i, mServiceConnection, Context.BIND_AUTO_CREATE);
 
         mContext = activity;
-
-        /*
-
-        mDistanceMeters = 0;
-        mFirstPosition = true;
-
-        // Create the location request to start receiving updates
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setInterval(UPDATE_INTERVAL);
-        mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
-
-        // Create LocationSettingsRequest object using location request
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(mLocationRequest);
-        LocationSettingsRequest locationSettingsRequest = builder.build();
-
-        // Check whether location settings are satisfied
-        // https://developers.google.com/android/reference/com/google/android/gms/location/SettingsClient
-        SettingsClient settingsClient = LocationServices.getSettingsClient(activity);
-        settingsClient.checkLocationSettings(locationSettingsRequest);
-
-        // new Google API SDK v11 uses getFusedLocationProviderClient(this)
-        try {
-            Log.i(TAG, "requesting location");
-            LocationServices.getFusedLocationProviderClient(activity).requestLocationUpdates(mLocationRequest, new LocationCallback() {
-                        @Override
-                        public void onLocationResult(LocationResult locationResult) {
-
-                            // New location is available...
-                            synchronized (this) {
-
-                                Location temp = locationResult.getLastLocation();
-                                if (temp != null) {
-
-                                    if (!mFirstPosition) {
-
-                                        mCurrentLocation = temp;
-
-                                        float accuracyMeters = 3.0f;
-
-                                        if (mCurrentLocation.hasAccuracy()) {
-                                            accuracyMeters = mCurrentLocation.getAccuracy();
-                                        }
-
-                                        float deltaMeters = mCurrentLocation.distanceTo(mPreviousLocation);
-
-                                        if (deltaMeters >= accuracyMeters) {
-                                            mPreviousLocation = mCurrentLocation;
-                                            mDistanceMeters += deltaMeters;
-                                        }
-
-                                        //try {
-                                        //    String str = String.format("%f %f %f\n",
-                                        //            mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude(), deltaMeters);
-
-                                        //    outputStream.write(str.getBytes());
-                                        //    outputStream.flush();
-                                        //} catch (IOException ioe) {
-                                        //    int break_here = 1;
-                                        //}
-
-                                    } else {
-
-                                        //
-                                        // This is the first location we've received, so set our
-                                        // current and previous to this location.
-                                        //
-                                        mCurrentLocation = temp;
-                                        mPreviousLocation = temp;
-                                    }
-                                }
-
-                                    mFirstPosition = false;
-                                //}
-                            }
-                        }
-                    },
-                    Looper.myLooper());
-        } catch (SecurityException se) {
-            int break_here = 1;
-        }
-        */
-        // should we return a track ID instead on success?
         return false;
+    }
+
+    public void stopTrack() {
+
+        mContext.unbindService(mServiceConnection);
+
+        Intent i = new Intent(mContext, TrackerLocationService.class);
+        mContext.stopService(i);
     }
 }
 

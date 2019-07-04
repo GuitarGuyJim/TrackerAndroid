@@ -1,10 +1,8 @@
 package android.redskysoftware.com.tracker;
 
 import android.app.Service;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.location.Location;
 import android.os.Binder;
 import android.os.IBinder;
@@ -45,8 +43,28 @@ public class TrackerLocationService extends Service {
         }
     }
 
-    // This is the object that receives interactions from clients.  See
-    // RemoteService for a more complete example.
+    /**
+     * This class implements a thread that increments the elapsed seconds counter once a second.
+     */
+    private class ElapsedTimeThread extends Thread {
+        @Override
+        public void run() {
+
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                } catch (java.lang.InterruptedException ie) {
+
+                }
+
+                //TODO jpk, not the right object to sync on.
+                synchronized (this) {
+                    mElapsedSeconds++;
+                }
+            }
+        }
+    }
+
     private final IBinder mBinder = new LocalBinder();
 
     private LocationRequest mLocationRequest;
@@ -56,13 +74,21 @@ public class TrackerLocationService extends Service {
     private float mDistanceMeters;
     private boolean mFirstPosition = true;
 
+    /** The number of seconds the service has been tracking location */
+    private int mElapsedSeconds = 0;
+
+    /** Thread to increment the mElapsedSeconds value once a second */
+    private ElapsedTimeThread mElapsedTimeThread;
+
+    private LocationCallback mLocationCallback = null;
+    private Context mContext;
+
     private long UPDATE_INTERVAL = 1 * 1000;  /* 5 secs */
     private long FASTEST_INTERVAL = 2000; /* 2 sec */
 
     @Override
     public void onCreate() {
 
-        //startLocationCollecting();
     }
 
     @Override
@@ -73,9 +99,13 @@ public class TrackerLocationService extends Service {
     @Override
     public void onDestroy() {
 
-        // Tell the user we stopped.
-        // Toast.makeText(this, R.string.local_service_stopped, Toast.LENGTH_SHORT).show();
-        int break_here = 1;
+        if (mLocationCallback != null) {
+            try {
+                LocationServices.getFusedLocationProviderClient(mContext).removeLocationUpdates(mLocationCallback);
+            } catch (SecurityException se) {
+
+            }
+        }
     }
 
     @Override
@@ -83,7 +113,21 @@ public class TrackerLocationService extends Service {
         return mBinder;
     }
 
-    public void startLocationCollecting(Context context) {
+    /**
+     * Starts the collection of location data
+     * @param context  The application or context that wants the data
+     * @return  True if started successfully, false if not started.  If not started, it may be due
+     *          to a location permissions issue.
+     */
+    public boolean startLocationCollecting(Context context) {
+
+        boolean result = true;
+
+        mContext = context;
+        mElapsedSeconds = 0;
+
+        mElapsedTimeThread = new ElapsedTimeThread();
+        mElapsedTimeThread.start();
 
         // Create the location request to start receiving updates
         mLocationRequest = new LocationRequest();
@@ -101,66 +145,70 @@ public class TrackerLocationService extends Service {
         SettingsClient settingsClient = LocationServices.getSettingsClient(context);
         settingsClient.checkLocationSettings(locationSettingsRequest);
 
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+
+                // New location is available...
+                synchronized (this) {
+
+                    Location temp = locationResult.getLastLocation();
+                    if (temp != null) {
+
+                        if (!mFirstPosition) {
+
+                            mCurrentLocation = temp;
+
+                            float accuracyMeters = 3.0f;
+
+                            if (mCurrentLocation.hasAccuracy()) {
+                                accuracyMeters = mCurrentLocation.getAccuracy();
+                            }
+
+                            float deltaMeters = mCurrentLocation.distanceTo(mPreviousLocation);
+
+                            if (deltaMeters >= accuracyMeters) {
+                                mPreviousLocation = mCurrentLocation;
+                                mDistanceMeters += deltaMeters;
+                            }
+
+                            //try {
+                            //    String str = String.format("%f %f %f\n",
+                            //            mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude(), deltaMeters);
+
+                            //    outputStream.write(str.getBytes());
+                            //    outputStream.flush();
+                            //} catch (IOException ioe) {
+                            //    int break_here = 1;
+                            //}
+
+                        } else {
+
+                            //
+                            // This is the first location we've received, so set our
+                            // current and previous to this location.
+                            //
+                            mCurrentLocation = temp;
+                            mPreviousLocation = temp;
+                        }
+                    }
+
+                    mFirstPosition = false;
+                }
+            }
+        };
+
         // new Google API SDK v11 uses getFusedLocationProviderClient(this)
         try {
-         //   Log.i(TAG, "requesting location");
-            LocationServices.getFusedLocationProviderClient(context).requestLocationUpdates(mLocationRequest, new LocationCallback() {
-                        @Override
-                        public void onLocationResult(LocationResult locationResult) {
-
-                            // New location is available...
-                            synchronized (this) {
-
-                                Location temp = locationResult.getLastLocation();
-                                if (temp != null) {
-
-                                    if (!mFirstPosition) {
-
-                                        mCurrentLocation = temp;
-
-                                        float accuracyMeters = 3.0f;
-
-                                        if (mCurrentLocation.hasAccuracy()) {
-                                            accuracyMeters = mCurrentLocation.getAccuracy();
-                                        }
-
-                                        float deltaMeters = mCurrentLocation.distanceTo(mPreviousLocation);
-
-                                        if (deltaMeters >= accuracyMeters) {
-                                            mPreviousLocation = mCurrentLocation;
-                                            mDistanceMeters += deltaMeters;
-                                        }
-
-                                        //try {
-                                        //    String str = String.format("%f %f %f\n",
-                                        //            mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude(), deltaMeters);
-
-                                        //    outputStream.write(str.getBytes());
-                                        //    outputStream.flush();
-                                        //} catch (IOException ioe) {
-                                        //    int break_here = 1;
-                                        //}
-
-                                    } else {
-
-                                        //
-                                        // This is the first location we've received, so set our
-                                        // current and previous to this location.
-                                        //
-                                        mCurrentLocation = temp;
-                                        mPreviousLocation = temp;
-                                    }
-                                }
-
-                                mFirstPosition = false;
-                                //}
-                            }
-                        }
-                    },
-                    Looper.myLooper());
+            LocationServices.getFusedLocationProviderClient(context)
+                    .requestLocationUpdates(mLocationRequest,
+                                            mLocationCallback,
+                                            Looper.myLooper());
         } catch (SecurityException se) {
-            int break_here = 1;
+            result = false;
         }
+
+        return result;
     }
 
     public float getDistance() {
@@ -174,6 +222,20 @@ public class TrackerLocationService extends Service {
         return distance;
     }
 
+    /**
+     * @return  The number of seconds the current track has been active.
+     */
+    public int getElapsedTime() {
+
+        int elapsedTime;
+
+        synchronized (this) {
+            elapsedTime = mElapsedSeconds;
+        }
+
+        return elapsedTime;
+    }
+
     public Location getCurrentLocation() {
         Location temp;
 
@@ -182,5 +244,15 @@ public class TrackerLocationService extends Service {
         }
 
         return temp;
+    }
+
+    public int getElapsedSeconds() {
+        int seconds;
+
+        synchronized (this) {
+            seconds = getElapsedSeconds();
+        }
+
+        return seconds;
     }
 }
