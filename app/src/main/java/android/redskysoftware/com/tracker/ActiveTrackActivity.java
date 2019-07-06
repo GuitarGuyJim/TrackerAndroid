@@ -58,7 +58,7 @@ public class ActiveTrackActivity extends AppCompatActivity
     private TextView mLatitudeText;
     private TextView mLongitudeText;
 
-    private FileOutputStream mOutputFile = null;
+
 
 
 
@@ -141,16 +141,9 @@ public class ActiveTrackActivity extends AppCompatActivity
      */
     private void startTrack() {
 
-       // try {
-       //     File dir = getFilesDir();
-       //     mOutputFile = openFileOutput("tracker.txt", 0);
-       // } catch (IOException ioe) {
-       //     int break_here = 1;
-       // }
-
         if (hasLocationPermissions()) {
 
-            mModel.startNewTrack(ActiveTrackActivity.this, mOutputFile);
+            mModel.startNewTrack(ActiveTrackActivity.this);
             monitorTrack();
 
         } else {
@@ -171,7 +164,7 @@ public class ActiveTrackActivity extends AppCompatActivity
             case REQUEST_LOCATION_PERMISSIONS:
                 if (hasLocationPermissions()) {
 
-                    mModel.startNewTrack(ActiveTrackActivity.this, mOutputFile);
+                    mModel.startNewTrack(ActiveTrackActivity.this);
 
                     monitorTrack();
                 }

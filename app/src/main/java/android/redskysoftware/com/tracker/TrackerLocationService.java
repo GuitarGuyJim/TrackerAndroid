@@ -16,6 +16,10 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.SettingsClient;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 /**
  * This service is responsible for collecting user location and updating track related information.
  * This is done in this service so it will continue to happen, even when the Tracker activity is
@@ -31,6 +35,10 @@ public class TrackerLocationService extends Service {
 
     /** Meters per degree of longitude at the equator */
     private final Double METERS_PER_DEGREE = 111319.9;
+
+    public interface DistanceChangedCallback {
+        void onDistanceChanged(float latitude, float longitude, float totalDistanceMeters);
+    }
 
     /**
      * Class for clients to access.  Because we know this service always
@@ -86,6 +94,11 @@ public class TrackerLocationService extends Service {
     private long UPDATE_INTERVAL = 1 * 1000;  /* 5 secs */
     private long FASTEST_INTERVAL = 2000; /* 2 sec */
 
+    /** The object that will be called when the location changes */
+    private DistanceChangedCallback mCallback = null;
+
+
+
     @Override
     public void onCreate() {
 
@@ -106,6 +119,7 @@ public class TrackerLocationService extends Service {
 
             }
         }
+
     }
 
     @Override
@@ -116,14 +130,16 @@ public class TrackerLocationService extends Service {
     /**
      * Starts the collection of location data
      * @param context  The application or context that wants the data
+     * @param cb  The object to callback when the distance changes
      * @return  True if started successfully, false if not started.  If not started, it may be due
      *          to a location permissions issue.
      */
-    public boolean startLocationCollecting(Context context) {
+    public boolean startLocationCollecting(Context context, DistanceChangedCallback cb) {
 
         boolean result = true;
 
         mContext = context;
+        mCallback = cb;
         mElapsedSeconds = 0;
 
         mElapsedTimeThread = new ElapsedTimeThread();
@@ -170,17 +186,13 @@ public class TrackerLocationService extends Service {
                             if (deltaMeters >= accuracyMeters) {
                                 mPreviousLocation = mCurrentLocation;
                                 mDistanceMeters += deltaMeters;
+
+                                if (mCallback != null) {
+                                    mCallback.onDistanceChanged((float) mCurrentLocation.getLatitude(),
+                                                (float) mCurrentLocation.getLongitude(),
+                                                mDistanceMeters);
+                                }
                             }
-
-                            //try {
-                            //    String str = String.format("%f %f %f\n",
-                            //            mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude(), deltaMeters);
-
-                            //    outputStream.write(str.getBytes());
-                            //    outputStream.flush();
-                            //} catch (IOException ioe) {
-                            //    int break_here = 1;
-                            //}
 
                         } else {
 
@@ -190,6 +202,12 @@ public class TrackerLocationService extends Service {
                             //
                             mCurrentLocation = temp;
                             mPreviousLocation = temp;
+
+                            if (mCallback != null) {
+                                mCallback.onDistanceChanged((float) mCurrentLocation.getLatitude(),
+                                        (float) mCurrentLocation.getLongitude(),
+                                        mDistanceMeters);
+                            }
                         }
                     }
 
@@ -201,9 +219,9 @@ public class TrackerLocationService extends Service {
         // new Google API SDK v11 uses getFusedLocationProviderClient(this)
         try {
             LocationServices.getFusedLocationProviderClient(context)
-                    .requestLocationUpdates(mLocationRequest,
-                                            mLocationCallback,
-                                            Looper.myLooper());
+                       .requestLocationUpdates(mLocationRequest,
+                                               mLocationCallback,
+                                               Looper.myLooper());
         } catch (SecurityException se) {
             result = false;
         }
